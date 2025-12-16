@@ -19,8 +19,6 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        /* ... (Retaining previous styles for buttons, output-box, controls, memory-grid) ... */
-        
         .button-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
@@ -50,7 +48,10 @@
             background-color: #fff;
             overflow-x: auto;
             /* Ensure text wraps correctly for better fraction display */
-            white-space: pre-wrap; 
+            white-space: pre-wrap;
+            text-align: center; /* Center the fraction components */
+            line-height: 1.1; /* Tighter line spacing for stacked fraction */
+            box-sizing: border-box; 
         }
         
         /* ... (Remaining previous CSS styles) ... */
@@ -287,31 +288,222 @@
     // --- Core Functions ---
 
     function updateDisplays() {
-        // Updated: If the expression contains '\frac', it's a fraction. 
-        // We render it visually using a simple, stacked text format for the display area.
-        if (currentExpression.includes('\\frac')) {
-            const numMatch = currentExpression.match(/\\frac{([^}]+)}/);
-            const denMatch = currentExpression.match(/\\frac{[^}]+}{([^}]+)}/);
+        // Find if the expression is a fraction and extract N and D
+        const fractionMatch = currentExpression.match(/\\frac{([^}]+)}{([^}]+)}/);
 
-            const num = numMatch ? numMatch[1] : '?';
-            const den = denMatch ? denMatch[1] : '?';
+        if (fractionMatch) {
+            const num = fractionMatch[1];
+            const den = fractionMatch[2];
             
-            // Simple visual approximation of a fraction bar (unicode character U+2015)
-            displayArea.textContent = `${num}\n\u2015\n${den}`; 
+            // Visual approximation of a fraction bar
+            // Use multiple hyphens to visually create a bar
+            const bar = '—'.repeat(Math.max(num.length, den.length, 5));
+            displayArea.textContent = `${num}\n${bar}\n${den}`; 
+            
+            // LaTeX output is the full code, including delimiters for copy
+            latexOutput.value = `\\(${currentExpression}\\)`;
         } else {
             // Standard display for simple expressions
             displayArea.textContent = currentExpression;
+            // Standard LaTeX output
+            latexOutput.value = `\\(${currentExpression}\\)`;
         }
 
-        // The mathOutput holds the RAW code or the simple expression
-        if (!currentExpression.includes('\\frac')) {
+        // The mathOutput holds the RAW code or the simple expression (no \frac)
+        // If currentExpression is a simple string, it goes into mathOutput.
+        // If currentExpression is a \frac, mathOutput holds the simple raw version.
+        if (!fractionMatch) {
             mathOutput.value = currentExpression;
         }
-        
-        // LaTeX output is always the proper code, wrapped in inline math delimiters
-        latexOutput.value = currentExpression.includes('\\frac') ? currentExpression : '\\(' + currentExpression + '\\)';
     }
 
     function appendSymbol(symbol) {
-        // Cannot append symbols to a LaTeX fraction, so we clear it first
-        if
+        // Cannot append symbols to a LaTeX fraction (e.g., \frac{a}{b} + c is not allowed here)
+        if (currentExpression.includes('\\frac')) {
+            alert("Cannot append to a constructed fraction. Clear current expression first or start a new simple expression.");
+            return;
+        }
+        currentExpression += symbol;
+        updateDisplays();
+    }
+    
+    function copyText(textareaElement, buttonElement) {
+        textareaElement.select();
+        document.execCommand('copy');
+        
+        if (buttonElement) {
+            const originalText = buttonElement.textContent;
+            buttonElement.textContent = 'Copied!';
+            setTimeout(() => {
+                buttonElement.textContent = originalText;
+            }, 1500);
+        }
+    }
+
+    // --- Handlers ---
+
+    function saveExpression() {
+        // Save the core LaTeX code or simple expression string
+        const expressionToSave = currentExpression.includes('\\frac') 
+            ? currentExpression 
+            : mathOutput.value;
+
+        if (expressionToSave === '') {
+            alert("The current expression is empty. Nothing to save!");
+            return;
+        }
+        if (nextMemorySlot > MAX_MEMORY_SLOTS) {
+            alert("All 10 memory slots are full. Clear memory slots if you wish to save new expressions.");
+            return;
+        }
+
+        const targetSlot = document.getElementById('expression-' + nextMemorySlot);
+        if (targetSlot) {
+            targetSlot.value = expressionToSave;
+            
+            saveButton.textContent = `Saved to Slot ${nextMemorySlot}!`;
+            setTimeout(() => {
+                saveButton.textContent = 'Save Expression';
+            }, 1500);
+            
+            nextMemorySlot++;
+        }
+    }
+
+    function clearMemory() {
+        if (!confirm("Are you sure you want to clear ALL 10 saved expressions?")) {
+            return;
+        }
+        for (let i = 1; i <= MAX_MEMORY_SLOTS; i++) {
+            const slot = document.getElementById(`expression-${i}`);
+            if (slot) {
+                slot.value = '';
+                slot.placeholder = 'Empty';
+            }
+        }
+        nextMemorySlot = 1;
+        clearMemoryButton.textContent = 'Memory Cleared!';
+        setTimeout(() => {
+            clearMemoryButton.textContent = 'Clear All Memory Slots';
+        }, 1500);
+    }
+    
+    // Memory Slot Click Handler (Load into buffer)
+    function loadIntoBuffer(expression) {
+        if (expression === '') {
+            loadedExpressionBuffer = '';
+            loadedExpressionDisplay.textContent = 'Nothing loaded. Slot was empty.';
+            return;
+        }
+        
+        // **FIX: Strip the \(\) delimiters if present, so we load only the core math code.**
+        // This ensures the Numerator/Denominator boxes get clean code.
+        const coreExpression = expression.replace(/^\\\((.*)\\\)$/g, '$1');
+
+        loadedExpressionBuffer = coreExpression;
+        loadedExpressionDisplay.textContent = `Loaded Expression: "${loadedExpressionBuffer}"`;
+    }
+
+    // Fraction Builder Handlers
+    loadNumButton.addEventListener('click', () => {
+        if (loadedExpressionBuffer) {
+            numeratorBox.value = loadedExpressionBuffer;
+            loadedExpressionBuffer = '';
+            loadedExpressionDisplay.textContent = 'Loaded into Numerator. Buffer cleared.';
+        } else {
+            alert("Please click a saved expression first to load it into the buffer.");
+        }
+    });
+
+    loadDenButton.addEventListener('click', () => {
+        if (loadedExpressionBuffer) {
+            denominatorBox.value = loadedExpressionBuffer;
+            loadedExpressionBuffer = ''; 
+            loadedExpressionDisplay.textContent = 'Loaded into Denominator. Buffer cleared.';
+        } else {
+            alert("Please click a saved expression first to load it into the buffer.");
+        }
+    });
+    
+    buildFractionButton.addEventListener('click', () => {
+        const num = numeratorBox.value.trim();
+        const den = denominatorBox.value.trim();
+
+        if (!num || !den) {
+            alert("Both Numerator and Denominator must contain an expression.");
+            return;
+        }
+
+        // Create the new RAW expression (for mathOutput box)
+        const newRawExpression = `(${num})/(${den})`;
+        
+        // Create the clean LaTeX code for the new expression
+        const newLatexCode = `\\frac{${num}}{${den}}`; 
+
+        // Load the core LaTeX code into the main current expression variable
+        currentExpression = newLatexCode; 
+        
+        // Update raw output field
+        mathOutput.value = newRawExpression; 
+        
+        updateDisplays(); // This will trigger the visual formatting
+        
+        buildFractionButton.textContent = 'Loaded to Current!';
+        setTimeout(() => {
+            buildFractionButton.textContent = 'Build & Load to Current';
+        }, 1500);
+    });
+
+    clearFractionButton.addEventListener('click', () => {
+        numeratorBox.value = '';
+        denominatorBox.value = '';
+        loadedExpressionBuffer = '';
+        loadedExpressionDisplay.textContent = 'No expression loaded from memory.';
+    });
+
+
+    // --- Initialization ---
+
+    // Generate the Symbol Buttons and Memory Slots (unchanged)
+    symbols.forEach(symbol => {
+        const button = document.createElement('button');
+        button.textContent = symbol;
+        button.className = 'symbol-button';
+        button.addEventListener('click', () => appendSymbol(symbol));
+        buttonsContainer.appendChild(button);
+    });
+
+    for (let i = 1; i <= MAX_MEMORY_SLOTS; i++) {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'memory-slot';
+        const label = document.createElement('label');
+        label.textContent = `Expression ${i}:`;
+        const textarea = document.createElement('textarea');
+        textarea.id = `expression-${i}`;
+        textarea.readOnly = true;
+        textarea.placeholder = 'Empty';
+        textarea.addEventListener('click', (event) => {
+            loadIntoBuffer(event.target.value);
+        });
+        slotDiv.appendChild(label);
+        slotDiv.appendChild(textarea);
+        memorySlotsContainer.appendChild(slotDiv);
+    }
+
+    // Attach Main Control Listeners
+    clearButton.addEventListener('click', () => {
+        currentExpression = '';
+        updateDisplays();
+    });
+    saveButton.addEventListener('click', saveExpression);
+    clearMemoryButton.addEventListener('click', clearMemory);
+    copyMathButton.addEventListener('click', () => copyText(mathOutput, copyMathButton));
+    copyLatexButton.addEventListener('click', () => copyText(latexOutput, copyLatexButton));
+
+    // Initialize displays
+    updateDisplays(); 
+
+</script>
+
+</body>
+</html>
