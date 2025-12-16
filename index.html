@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Math Expression Builder with Memory</title>
+    <title>Advanced Math Expression Builder</title>
     <style>
         /* CSS for simple styling */
         body {
@@ -12,13 +12,14 @@
             background-color: #f4f4f4;
         }
         .container {
-            max-width: 900px; /* Wider to accommodate memory slots */
+            max-width: 950px; 
             margin: auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
+        /* ... (Retaining previous styles for buttons, display-area, output-box) ... */
         .button-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
@@ -83,7 +84,10 @@
             background-color: #f44336; /* Red */
         }
         #save-button {
-            background-color: #ff9800; /* Orange - New Save Button */
+            background-color: #ff9800; /* Orange - Save Button */
+        }
+        #clear-memory-button { /* New button style */
+            background-color: #9E9E9E; /* Gray */
         }
         #copy-math-button {
             background-color: #008CBA; /* Blue */
@@ -91,11 +95,11 @@
         #copy-latex-button {
             background-color: #4CAF50; /* Green */
         }
-
+        
         /* Styling for Memory Slots */
         .memory-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* Two columns for memory slots */
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin-top: 20px;
             padding-top: 15px;
@@ -119,30 +123,87 @@
             padding: 5px;
             box-sizing: border-box;
             resize: none;
-            cursor: pointer; /* Indicate they can be selected/copied */
+            cursor: pointer; 
+        }
+        
+        /* New Fraction Builder Styles */
+        .fraction-builder {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            background-color: #e8f5e9;
+        }
+        .fraction-components {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .fraction-part {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #a5d6a7;
+            background-color: #f1f8e9;
+            border-radius: 4px;
+        }
+        .fraction-part label {
+            font-weight: bold;
+            color: #388e3c;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .fraction-input {
+            width: 100%;
+            height: 50px;
+            font-family: monospace;
+            font-size: 1.1em;
+            padding: 5px;
+            box-sizing: border-box;
+            resize: none;
+            background-color: white;
+            border: 1px solid #ccc;
+        }
+        .fraction-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .fraction-controls button {
+            flex-grow: 1;
+            padding: 8px;
+            font-size: 0.9em;
+        }
+        #loaded-expression-display {
+            padding: 8px;
+            background-color: #fff3e0;
+            border: 1px solid #ffb74d;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🔢 Simple Math Expression Builder with Memory</h2>
-    <p>Click the buttons below to build your expression, then click **Save Expression** to store it.</p>
-
+    <h2>🔢 Simple Math Expression Builder</h2>
+    
+    <h3>Current Expression</h3>
+    <p>Click the buttons below to build your expression.</p>
     <div id="display-area"></div>
 
+    <div class="button-grid" id="symbol-buttons-container"></div>
+    
     <div class="controls-row">
         <button id="save-button" class="control-button">Save Expression</button>
-        <button id="clear-button" class="control-button">Clear</button>
+        <button id="clear-button" class="control-button">Clear Current</button>
         <button id="copy-math-button" class="control-button">Copy Expression</button>
         <button id="copy-latex-button" class="control-button">Copy LaTeX Code</button>
     </div>
 
-    <div class="button-grid" id="symbol-buttons-container">
-        </div>
-
     <div class="output-box">
-        <label for="math-expression-output">Current Expression:</label>
+        <label for="math-expression-output">Current Expression (Raw):</label>
         <textarea id="math-expression-output" readonly></textarea>
     </div>
 
@@ -151,9 +212,37 @@
         <textarea id="latex-output" readonly></textarea>
     </div>
 
-    <h3>Saved Expressions (Memory)</h3>
-    <div class="memory-grid" id="memory-slots-container">
+    <div class="fraction-builder">
+        <h3>🔗 Build Fraction Expression ($\frac{N}{D}$)</h3>
+        <p>1. Click a saved expression below to load it into the buffer.</p>
+        <p>2. Click **Load N** or **Load D** to transfer it.</p>
+        <p id="loaded-expression-display">No expression loaded from memory.</p>
+
+        <div class="fraction-components">
+            <div class="fraction-part">
+                <label>Numerator (N)</label>
+                <textarea id="numerator-box" class="fraction-input" readonly placeholder="Load N from memory"></textarea>
+            </div>
+            <div class="fraction-part">
+                <label>Denominator (D)</label>
+                <textarea id="denominator-box" class="fraction-input" readonly placeholder="Load D from memory"></textarea>
+            </div>
         </div>
+
+        <div class="fraction-controls">
+            <button id="load-num-button" class="control-button" style="background-color: #6a1b9a;">Load into Numerator (N)</button>
+            <button id="load-den-button" class="control-button" style="background-color: #3f51b5;">Load into Denominator (D)</button>
+            <button id="build-fraction-button" class="control-button" style="background-color: #00bcd4;">Build & Load to Current</button>
+            <button id="clear-fraction-button" class="control-button" style="background-color: #795548;">Clear Fraction Boxes</button>
+        </div>
+    </div>
+
+
+    <h3>Saved Expressions (Memory)</h3>
+    <div class="controls-row">
+        <button id="clear-memory-button" class="control-button">Clear All Memory Slots</button>
+    </div>
+    <div class="memory-grid" id="memory-slots-container"></div>
 
 </div>
 
@@ -172,61 +261,44 @@
     const mathOutput = document.getElementById('math-expression-output');
     const latexOutput = document.getElementById('latex-output');
     const clearButton = document.getElementById('clear-button');
-    const saveButton = document.getElementById('save-button'); // New button
+    const saveButton = document.getElementById('save-button'); 
+    const clearMemoryButton = document.getElementById('clear-memory-button'); // New
     const copyMathButton = document.getElementById('copy-math-button');
     const copyLatexButton = document.getElementById('copy-latex-button');
     
+    // Fraction Builder Elements
+    const numeratorBox = document.getElementById('numerator-box');
+    const denominatorBox = document.getElementById('denominator-box');
+    const loadNumButton = document.getElementById('load-num-button');
+    const loadDenButton = document.getElementById('load-den-button');
+    const buildFractionButton = document.getElementById('build-fraction-button');
+    const clearFractionButton = document.getElementById('clear-fraction-button');
+    const loadedExpressionDisplay = document.getElementById('loaded-expression-display');
+
     let currentExpression = '';
     const MAX_MEMORY_SLOTS = 10;
-    let nextMemorySlot = 1; // Tracks the next slot to save to
+    let nextMemorySlot = 1;
+    let loadedExpressionBuffer = ''; // Buffer for the expression clicked from memory
 
-    // --- 1. Function to update all displays ---
+    // --- Core Functions ---
+
     function updateDisplays() {
         displayArea.textContent = currentExpression;
         mathOutput.value = currentExpression;
         // Simple LaTeX: standard symbols are the same, wrap in \( ... \)
+        // The LaTeX output will automatically update when the fraction is loaded.
         latexOutput.value = '\\(' + currentExpression + '\\)';
     }
 
-    // --- 2. Function to handle button clicks (Add symbol) ---
     function appendSymbol(symbol) {
         currentExpression += symbol;
         updateDisplays();
     }
-
-    // --- 3. Save Expression Handler ---
-    function saveExpression() {
-        if (currentExpression === '') {
-            alert("The current expression is empty. Nothing to save!");
-            return;
-        }
-        if (nextMemorySlot > MAX_MEMORY_SLOTS) {
-            alert("All 10 memory slots are full. Clear a slot or click an expression box to copy it.");
-            return;
-        }
-
-        const targetSlot = document.getElementById('expression-' + nextMemorySlot);
-        if (targetSlot) {
-            targetSlot.value = currentExpression;
-            // Provide feedback
-            saveButton.textContent = `Saved to Slot ${nextMemorySlot}!`;
-            setTimeout(() => {
-                saveButton.textContent = 'Save Expression';
-            }, 1500);
-            
-            // Move to the next slot
-            nextMemorySlot++;
-        }
-    }
     
-    // --- 4. Control Button Handlers (Clear/Copy) ---
-    
-    // Helper function for copying text
     function copyText(textareaElement, buttonElement) {
         textareaElement.select();
         document.execCommand('copy');
         
-        // Provide temporary feedback if a button is passed
         if (buttonElement) {
             const originalText = buttonElement.textContent;
             buttonElement.textContent = 'Copied!';
@@ -236,22 +308,117 @@
         }
     }
 
-    clearButton.addEventListener('click', () => {
-        currentExpression = '';
+    // --- Handlers ---
+
+    function saveExpression() {
+        if (currentExpression === '') {
+            alert("The current expression is empty. Nothing to save!");
+            return;
+        }
+        if (nextMemorySlot > MAX_MEMORY_SLOTS) {
+            alert("All 10 memory slots are full. Clear memory slots if you wish to save new expressions.");
+            return;
+        }
+
+        const targetSlot = document.getElementById('expression-' + nextMemorySlot);
+        if (targetSlot) {
+            targetSlot.value = currentExpression;
+            saveButton.textContent = `Saved to Slot ${nextMemorySlot}!`;
+            setTimeout(() => {
+                saveButton.textContent = 'Save Expression';
+            }, 1500);
+            
+            nextMemorySlot++;
+        }
+    }
+
+    function clearMemory() {
+        if (!confirm("Are you sure you want to clear ALL 10 saved expressions?")) {
+            return;
+        }
+        for (let i = 1; i <= MAX_MEMORY_SLOTS; i++) {
+            const slot = document.getElementById(`expression-${i}`);
+            if (slot) {
+                slot.value = '';
+                slot.placeholder = 'Empty';
+            }
+        }
+        nextMemorySlot = 1;
+        clearMemoryButton.textContent = 'Memory Cleared!';
+        setTimeout(() => {
+            clearMemoryButton.textContent = 'Clear All Memory Slots';
+        }, 1500);
+    }
+    
+    // Memory Slot Click Handler (Load into buffer)
+    function loadIntoBuffer(expression) {
+        if (expression === '') {
+            loadedExpressionBuffer = '';
+            loadedExpressionDisplay.textContent = 'Nothing loaded. Slot was empty.';
+            return;
+        }
+        loadedExpressionBuffer = expression;
+        loadedExpressionDisplay.textContent = `Loaded Expression: "${loadedExpressionBuffer}"`;
+    }
+
+    // Fraction Builder Handlers
+    loadNumButton.addEventListener('click', () => {
+        if (loadedExpressionBuffer) {
+            numeratorBox.value = loadedExpressionBuffer;
+            loadedExpressionBuffer = ''; // Clear buffer after use
+            loadedExpressionDisplay.textContent = 'Loaded into Numerator. Buffer cleared.';
+        } else {
+            alert("Please click a saved expression first to load it into the buffer.");
+        }
+    });
+
+    loadDenButton.addEventListener('click', () => {
+        if (loadedExpressionBuffer) {
+            denominatorBox.value = loadedExpressionBuffer;
+            loadedExpressionBuffer = ''; // Clear buffer after use
+            loadedExpressionDisplay.textContent = 'Loaded into Denominator. Buffer cleared.';
+        } else {
+            alert("Please click a saved expression first to load it into the buffer.");
+        }
+    });
+    
+    buildFractionButton.addEventListener('click', () => {
+        const num = numeratorBox.value.trim();
+        const den = denominatorBox.value.trim();
+
+        if (!num || !den) {
+            alert("Both Numerator and Denominator must contain an expression.");
+            return;
+        }
+
+        // Create the new raw expression (using parentheses for clarity)
+        const newRawExpression = `(${num})/(${den})`;
+        
+        // Create the LaTeX code for the new expression
+        const newLatexCode = `\\frac{${num}}{${den}}`; 
+
+        // Load the LaTeX code into the main current expression
+        currentExpression = newLatexCode;
         updateDisplays();
+        
+        // Update raw output separately, since the main display now shows LaTeX
+        mathOutput.value = newRawExpression; 
+        
+        buildFractionButton.textContent = 'Loaded to Current!';
+        setTimeout(() => {
+            buildFractionButton.textContent = 'Build & Load to Current';
+        }, 1500);
     });
 
-    saveButton.addEventListener('click', saveExpression);
-
-    copyMathButton.addEventListener('click', () => {
-        copyText(mathOutput, copyMathButton);
+    clearFractionButton.addEventListener('click', () => {
+        numeratorBox.value = '';
+        denominatorBox.value = '';
+        loadedExpressionBuffer = '';
+        loadedExpressionDisplay.textContent = 'No expression loaded from memory.';
     });
 
-    copyLatexButton.addEventListener('click', () => {
-        copyText(latexOutput, copyLatexButton);
-    });
 
-    // --- 5. Initial Generation Functions ---
+    // --- Initialization ---
 
     // Generate the Symbol Buttons
     symbols.forEach(symbol => {
@@ -275,16 +442,25 @@
         textarea.readOnly = true;
         textarea.placeholder = 'Empty';
         
-        // Allow clicking the memory slot to copy its content
-        textarea.addEventListener('click', () => {
-            copyText(textarea, null); // Pass null for buttonElement as we don't need button feedback
-            alert(`Expression ${i} copied to clipboard!`);
+        // Event for loading into the buffer
+        textarea.addEventListener('click', (event) => {
+            loadIntoBuffer(event.target.value);
         });
 
         slotDiv.appendChild(label);
         slotDiv.appendChild(textarea);
         memorySlotsContainer.appendChild(slotDiv);
     }
+
+    // Attach Main Control Listeners
+    clearButton.addEventListener('click', () => {
+        currentExpression = '';
+        updateDisplays();
+    });
+    saveButton.addEventListener('click', saveExpression);
+    clearMemoryButton.addEventListener('click', clearMemory);
+    copyMathButton.addEventListener('click', () => copyText(mathOutput, copyMathButton));
+    copyLatexButton.addEventListener('click', () => copyText(latexOutput, copyLatexButton));
 
     // Initialize displays
     updateDisplays(); 
