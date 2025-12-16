@@ -19,7 +19,8 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        /* ... (Retaining previous styles for buttons, display-area, output-box) ... */
+        /* ... (Retaining previous styles for buttons, output-box, controls, memory-grid) ... */
+        
         .button-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
@@ -38,15 +39,22 @@
         .symbol-button:hover {
             background-color: #ddd;
         }
+        
+        /* UPDATED DISPLAY AREA STYLE */
         #display-area {
             min-height: 50px;
             border: 2px solid #333;
             padding: 10px;
             margin-bottom: 20px;
-            font-size: 1.5em;
+            font-size: 1.5em; 
             background-color: #fff;
             overflow-x: auto;
+            /* Ensure text wraps correctly for better fraction display */
+            white-space: pre-wrap; 
         }
+        
+        /* ... (Remaining previous CSS styles) ... */
+
         .output-box {
             margin-top: 15px;
             padding: 10px;
@@ -81,22 +89,20 @@
             flex-grow: 1;
         }
         #clear-button {
-            background-color: #f44336; /* Red */
+            background-color: #f44336;
         }
         #save-button {
-            background-color: #ff9800; /* Orange - Save Button */
+            background-color: #ff9800;
         }
-        #clear-memory-button { /* New button style */
-            background-color: #9E9E9E; /* Gray */
+        #clear-memory-button { 
+            background-color: #9E9E9E; 
         }
         #copy-math-button {
-            background-color: #008CBA; /* Blue */
+            background-color: #008CBA;
         }
         #copy-latex-button {
-            background-color: #4CAF50; /* Green */
+            background-color: #4CAF50;
         }
-        
-        /* Styling for Memory Slots */
         .memory-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -125,8 +131,6 @@
             resize: none;
             cursor: pointer; 
         }
-        
-        /* New Fraction Builder Styles */
         .fraction-builder {
             margin-top: 30px;
             padding: 20px;
@@ -190,7 +194,7 @@
     <h2>🔢 Simple Math Expression Builder</h2>
     
     <h3>Current Expression</h3>
-    <p>Click the buttons below to build your expression.</p>
+    <p>Click the buttons below to build your expression. **Note: Fractions are built below.**</p>
     <div id="display-area"></div>
 
     <div class="button-grid" id="symbol-buttons-container"></div>
@@ -198,17 +202,17 @@
     <div class="controls-row">
         <button id="save-button" class="control-button">Save Expression</button>
         <button id="clear-button" class="control-button">Clear Current</button>
-        <button id="copy-math-button" class="control-button">Copy Expression</button>
+        <button id="copy-math-button" class="control-button">Copy Raw Code</button>
         <button id="copy-latex-button" class="control-button">Copy LaTeX Code</button>
     </div>
 
     <div class="output-box">
-        <label for="math-expression-output">Current Expression (Raw):</label>
+        <label for="math-expression-output">Current Expression (Raw Code):</label>
         <textarea id="math-expression-output" readonly></textarea>
     </div>
 
     <div class="output-box">
-        <label for="latex-output">Current LaTeX Code:</label>
+        <label for="latex-output">Current LaTeX Code (for rendering the division line):</label>
         <textarea id="latex-output" readonly></textarea>
     </div>
 
@@ -262,7 +266,7 @@
     const latexOutput = document.getElementById('latex-output');
     const clearButton = document.getElementById('clear-button');
     const saveButton = document.getElementById('save-button'); 
-    const clearMemoryButton = document.getElementById('clear-memory-button'); // New
+    const clearMemoryButton = document.getElementById('clear-memory-button'); 
     const copyMathButton = document.getElementById('copy-math-button');
     const copyLatexButton = document.getElementById('copy-latex-button');
     
@@ -278,194 +282,36 @@
     let currentExpression = '';
     const MAX_MEMORY_SLOTS = 10;
     let nextMemorySlot = 1;
-    let loadedExpressionBuffer = ''; // Buffer for the expression clicked from memory
+    let loadedExpressionBuffer = ''; 
 
     // --- Core Functions ---
 
     function updateDisplays() {
-        displayArea.textContent = currentExpression;
-        mathOutput.value = currentExpression;
-        // Simple LaTeX: standard symbols are the same, wrap in \( ... \)
-        // The LaTeX output will automatically update when the fraction is loaded.
-        latexOutput.value = '\\(' + currentExpression + '\\)';
+        // Updated: If the expression contains '\frac', it's a fraction. 
+        // We render it visually using a simple, stacked text format for the display area.
+        if (currentExpression.includes('\\frac')) {
+            const numMatch = currentExpression.match(/\\frac{([^}]+)}/);
+            const denMatch = currentExpression.match(/\\frac{[^}]+}{([^}]+)}/);
+
+            const num = numMatch ? numMatch[1] : '?';
+            const den = denMatch ? denMatch[1] : '?';
+            
+            // Simple visual approximation of a fraction bar (unicode character U+2015)
+            displayArea.textContent = `${num}\n\u2015\n${den}`; 
+        } else {
+            // Standard display for simple expressions
+            displayArea.textContent = currentExpression;
+        }
+
+        // The mathOutput holds the RAW code or the simple expression
+        if (!currentExpression.includes('\\frac')) {
+            mathOutput.value = currentExpression;
+        }
+        
+        // LaTeX output is always the proper code, wrapped in inline math delimiters
+        latexOutput.value = currentExpression.includes('\\frac') ? currentExpression : '\\(' + currentExpression + '\\)';
     }
 
     function appendSymbol(symbol) {
-        currentExpression += symbol;
-        updateDisplays();
-    }
-    
-    function copyText(textareaElement, buttonElement) {
-        textareaElement.select();
-        document.execCommand('copy');
-        
-        if (buttonElement) {
-            const originalText = buttonElement.textContent;
-            buttonElement.textContent = 'Copied!';
-            setTimeout(() => {
-                buttonElement.textContent = originalText;
-            }, 1500);
-        }
-    }
-
-    // --- Handlers ---
-
-    function saveExpression() {
-        if (currentExpression === '') {
-            alert("The current expression is empty. Nothing to save!");
-            return;
-        }
-        if (nextMemorySlot > MAX_MEMORY_SLOTS) {
-            alert("All 10 memory slots are full. Clear memory slots if you wish to save new expressions.");
-            return;
-        }
-
-        const targetSlot = document.getElementById('expression-' + nextMemorySlot);
-        if (targetSlot) {
-            targetSlot.value = currentExpression;
-            saveButton.textContent = `Saved to Slot ${nextMemorySlot}!`;
-            setTimeout(() => {
-                saveButton.textContent = 'Save Expression';
-            }, 1500);
-            
-            nextMemorySlot++;
-        }
-    }
-
-    function clearMemory() {
-        if (!confirm("Are you sure you want to clear ALL 10 saved expressions?")) {
-            return;
-        }
-        for (let i = 1; i <= MAX_MEMORY_SLOTS; i++) {
-            const slot = document.getElementById(`expression-${i}`);
-            if (slot) {
-                slot.value = '';
-                slot.placeholder = 'Empty';
-            }
-        }
-        nextMemorySlot = 1;
-        clearMemoryButton.textContent = 'Memory Cleared!';
-        setTimeout(() => {
-            clearMemoryButton.textContent = 'Clear All Memory Slots';
-        }, 1500);
-    }
-    
-    // Memory Slot Click Handler (Load into buffer)
-    function loadIntoBuffer(expression) {
-        if (expression === '') {
-            loadedExpressionBuffer = '';
-            loadedExpressionDisplay.textContent = 'Nothing loaded. Slot was empty.';
-            return;
-        }
-        loadedExpressionBuffer = expression;
-        loadedExpressionDisplay.textContent = `Loaded Expression: "${loadedExpressionBuffer}"`;
-    }
-
-    // Fraction Builder Handlers
-    loadNumButton.addEventListener('click', () => {
-        if (loadedExpressionBuffer) {
-            numeratorBox.value = loadedExpressionBuffer;
-            loadedExpressionBuffer = ''; // Clear buffer after use
-            loadedExpressionDisplay.textContent = 'Loaded into Numerator. Buffer cleared.';
-        } else {
-            alert("Please click a saved expression first to load it into the buffer.");
-        }
-    });
-
-    loadDenButton.addEventListener('click', () => {
-        if (loadedExpressionBuffer) {
-            denominatorBox.value = loadedExpressionBuffer;
-            loadedExpressionBuffer = ''; // Clear buffer after use
-            loadedExpressionDisplay.textContent = 'Loaded into Denominator. Buffer cleared.';
-        } else {
-            alert("Please click a saved expression first to load it into the buffer.");
-        }
-    });
-    
-    buildFractionButton.addEventListener('click', () => {
-        const num = numeratorBox.value.trim();
-        const den = denominatorBox.value.trim();
-
-        if (!num || !den) {
-            alert("Both Numerator and Denominator must contain an expression.");
-            return;
-        }
-
-        // Create the new raw expression (using parentheses for clarity)
-        const newRawExpression = `(${num})/(${den})`;
-        
-        // Create the LaTeX code for the new expression
-        const newLatexCode = `\\frac{${num}}{${den}}`; 
-
-        // Load the LaTeX code into the main current expression
-        currentExpression = newLatexCode;
-        updateDisplays();
-        
-        // Update raw output separately, since the main display now shows LaTeX
-        mathOutput.value = newRawExpression; 
-        
-        buildFractionButton.textContent = 'Loaded to Current!';
-        setTimeout(() => {
-            buildFractionButton.textContent = 'Build & Load to Current';
-        }, 1500);
-    });
-
-    clearFractionButton.addEventListener('click', () => {
-        numeratorBox.value = '';
-        denominatorBox.value = '';
-        loadedExpressionBuffer = '';
-        loadedExpressionDisplay.textContent = 'No expression loaded from memory.';
-    });
-
-
-    // --- Initialization ---
-
-    // Generate the Symbol Buttons
-    symbols.forEach(symbol => {
-        const button = document.createElement('button');
-        button.textContent = symbol;
-        button.className = 'symbol-button';
-        button.addEventListener('click', () => appendSymbol(symbol));
-        buttonsContainer.appendChild(button);
-    });
-
-    // Generate the Memory Slots
-    for (let i = 1; i <= MAX_MEMORY_SLOTS; i++) {
-        const slotDiv = document.createElement('div');
-        slotDiv.className = 'memory-slot';
-        
-        const label = document.createElement('label');
-        label.textContent = `Expression ${i}:`;
-        
-        const textarea = document.createElement('textarea');
-        textarea.id = `expression-${i}`;
-        textarea.readOnly = true;
-        textarea.placeholder = 'Empty';
-        
-        // Event for loading into the buffer
-        textarea.addEventListener('click', (event) => {
-            loadIntoBuffer(event.target.value);
-        });
-
-        slotDiv.appendChild(label);
-        slotDiv.appendChild(textarea);
-        memorySlotsContainer.appendChild(slotDiv);
-    }
-
-    // Attach Main Control Listeners
-    clearButton.addEventListener('click', () => {
-        currentExpression = '';
-        updateDisplays();
-    });
-    saveButton.addEventListener('click', saveExpression);
-    clearMemoryButton.addEventListener('click', clearMemory);
-    copyMathButton.addEventListener('click', () => copyText(mathOutput, copyMathButton));
-    copyLatexButton.addEventListener('click', () => copyText(latexOutput, copyLatexButton));
-
-    // Initialize displays
-    updateDisplays(); 
-
-</script>
-
-</body>
-</html>
+        // Cannot append symbols to a LaTeX fraction, so we clear it first
+        if
