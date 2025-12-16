@@ -38,7 +38,7 @@
             background-color: #ddd;
         }
         
-        /* UPDATED DISPLAY AREA STYLE */
+        /* FINAL REFINED DISPLAY AREA STYLE */
         #display-area {
             min-height: 50px;
             border: 2px solid #333;
@@ -47,10 +47,9 @@
             font-size: 1.5em; 
             background-color: #fff;
             overflow-x: auto;
-            /* Ensure text wraps correctly for better fraction display */
-            white-space: pre-wrap;
-            text-align: center; /* Center the fraction components */
-            line-height: 1.1; /* Tighter line spacing for stacked fraction */
+            white-space: pre-wrap; /* Allows line breaks for fraction stacking */
+            text-align: center; 
+            line-height: 1.1; /* Tighter line spacing */
             box-sizing: border-box; 
         }
         
@@ -288,7 +287,6 @@
     // --- Core Functions ---
 
     function updateDisplays() {
-        // Find if the expression is a fraction and extract N and D
         const fractionMatch = currentExpression.match(/\\frac{([^}]+)}{([^}]+)}/);
 
         if (fractionMatch) {
@@ -296,23 +294,21 @@
             const den = fractionMatch[2];
             
             // Visual approximation of a fraction bar
-            // Use multiple hyphens to visually create a bar
             const bar = '—'.repeat(Math.max(num.length, den.length, 5));
             displayArea.textContent = `${num}\n${bar}\n${den}`; 
             
-            // LaTeX output is the full code, including delimiters for copy
+            // Set LaTeX Output (No change)
             latexOutput.value = `\\(${currentExpression}\\)`;
+            
+            // Set Raw Output to show the standard computer notation
+            mathOutput.value = `(${num})/(${den})`; 
+            
         } else {
             // Standard display for simple expressions
             displayArea.textContent = currentExpression;
             // Standard LaTeX output
             latexOutput.value = `\\(${currentExpression}\\)`;
-        }
-
-        // The mathOutput holds the RAW code or the simple expression (no \frac)
-        // If currentExpression is a simple string, it goes into mathOutput.
-        // If currentExpression is a \frac, mathOutput holds the simple raw version.
-        if (!fractionMatch) {
+            // Standard Raw Output
             mathOutput.value = currentExpression;
         }
     }
@@ -396,8 +392,7 @@
             return;
         }
         
-        // **FIX: Strip the \(\) delimiters if present, so we load only the core math code.**
-        // This ensures the Numerator/Denominator boxes get clean code.
+        // Strip the \(\) delimiters if present, so we load only the core math code.
         const coreExpression = expression.replace(/^\\\((.*)\\\)$/g, '$1');
 
         loadedExpressionBuffer = coreExpression;
@@ -443,10 +438,10 @@
         // Load the core LaTeX code into the main current expression variable
         currentExpression = newLatexCode; 
         
-        // Update raw output field
+        // Update the raw output field separately for copy button
         mathOutput.value = newRawExpression; 
         
-        updateDisplays(); // This will trigger the visual formatting
+        updateDisplays(); // This will trigger the visual formatting in display-area
         
         buildFractionButton.textContent = 'Loaded to Current!';
         setTimeout(() => {
