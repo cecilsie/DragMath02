@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Math Expression Builder</title>
+    <title>Simple Math Expression Builder with Memory</title>
     <style>
         /* CSS for simple styling */
         body {
@@ -12,7 +12,7 @@
             background-color: #f4f4f4;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px; /* Wider to accommodate memory slots */
             margin: auto;
             background: white;
             padding: 20px;
@@ -82,23 +82,57 @@
         #clear-button {
             background-color: #f44336; /* Red */
         }
+        #save-button {
+            background-color: #ff9800; /* Orange - New Save Button */
+        }
         #copy-math-button {
             background-color: #008CBA; /* Blue */
         }
         #copy-latex-button {
             background-color: #4CAF50; /* Green */
         }
+
+        /* Styling for Memory Slots */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Two columns for memory slots */
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+        }
+        .memory-slot {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        .memory-slot label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .memory-slot textarea {
+            height: 40px;
+            width: 100%;
+            font-family: monospace;
+            padding: 5px;
+            box-sizing: border-box;
+            resize: none;
+            cursor: pointer; /* Indicate they can be selected/copied */
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🔢 Simple Math Expression Builder</h2>
-    <p>Click the buttons below to build your expression.</p>
+    <h2>🔢 Simple Math Expression Builder with Memory</h2>
+    <p>Click the buttons below to build your expression, then click **Save Expression** to store it.</p>
 
     <div id="display-area"></div>
 
     <div class="controls-row">
+        <button id="save-button" class="control-button">Save Expression</button>
         <button id="clear-button" class="control-button">Clear</button>
         <button id="copy-math-button" class="control-button">Copy Expression</button>
         <button id="copy-latex-button" class="control-button">Copy LaTeX Code</button>
@@ -108,21 +142,23 @@
         </div>
 
     <div class="output-box">
-        <label for="math-expression-output">Expression:</label>
+        <label for="math-expression-output">Current Expression:</label>
         <textarea id="math-expression-output" readonly></textarea>
     </div>
 
     <div class="output-box">
-        <label for="latex-output">LaTeX Code:</label>
+        <label for="latex-output">Current LaTeX Code:</label>
         <textarea id="latex-output" readonly></textarea>
     </div>
+
+    <h3>Saved Expressions (Memory)</h3>
+    <div class="memory-grid" id="memory-slots-container">
+        </div>
 
 </div>
 
 <script>
     // JavaScript Logic
-
-    // Define the symbols based on your requirements
     const symbols = [
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -132,24 +168,23 @@
 
     const displayArea = document.getElementById('display-area');
     const buttonsContainer = document.getElementById('symbol-buttons-container');
+    const memorySlotsContainer = document.getElementById('memory-slots-container');
     const mathOutput = document.getElementById('math-expression-output');
     const latexOutput = document.getElementById('latex-output');
     const clearButton = document.getElementById('clear-button');
+    const saveButton = document.getElementById('save-button'); // New button
     const copyMathButton = document.getElementById('copy-math-button');
     const copyLatexButton = document.getElementById('copy-latex-button');
+    
     let currentExpression = '';
+    const MAX_MEMORY_SLOTS = 10;
+    let nextMemorySlot = 1; // Tracks the next slot to save to
 
     // --- 1. Function to update all displays ---
     function updateDisplays() {
-        // Update the main visual display
         displayArea.textContent = currentExpression;
-
-        // Update the Math Expression output box
         mathOutput.value = currentExpression;
-
-        // Update the LaTeX output box
-        // Simple LaTeX: standard symbols are the same, just wrap in $$ or \(. . \), 
-        // using \( ... \) for inline math here.
+        // Simple LaTeX: standard symbols are the same, wrap in \( ... \)
         latexOutput.value = '\\(' + currentExpression + '\\)';
     }
 
@@ -159,36 +194,54 @@
         updateDisplays();
     }
 
-    // --- 3. Generate the Symbol Buttons ---
-    symbols.forEach(symbol => {
-        const button = document.createElement('button');
-        button.textContent = symbol;
-        button.className = 'symbol-button';
-        // Use an anonymous function to pass the symbol to the click handler
-        button.addEventListener('click', () => appendSymbol(symbol));
-        buttonsContainer.appendChild(button);
-    });
+    // --- 3. Save Expression Handler ---
+    function saveExpression() {
+        if (currentExpression === '') {
+            alert("The current expression is empty. Nothing to save!");
+            return;
+        }
+        if (nextMemorySlot > MAX_MEMORY_SLOTS) {
+            alert("All 10 memory slots are full. Clear a slot or click an expression box to copy it.");
+            return;
+        }
 
-    // --- 4. Control Button Handlers ---
+        const targetSlot = document.getElementById('expression-' + nextMemorySlot);
+        if (targetSlot) {
+            targetSlot.value = currentExpression;
+            // Provide feedback
+            saveButton.textContent = `Saved to Slot ${nextMemorySlot}!`;
+            setTimeout(() => {
+                saveButton.textContent = 'Save Expression';
+            }, 1500);
+            
+            // Move to the next slot
+            nextMemorySlot++;
+        }
+    }
+    
+    // --- 4. Control Button Handlers (Clear/Copy) ---
+    
+    // Helper function for copying text
+    function copyText(textareaElement, buttonElement) {
+        textareaElement.select();
+        document.execCommand('copy');
+        
+        // Provide temporary feedback if a button is passed
+        if (buttonElement) {
+            const originalText = buttonElement.textContent;
+            buttonElement.textContent = 'Copied!';
+            setTimeout(() => {
+                buttonElement.textContent = originalText;
+            }, 1500);
+        }
+    }
+
     clearButton.addEventListener('click', () => {
         currentExpression = '';
         updateDisplays();
     });
 
-    // Helper function for copying text
-    function copyText(textareaElement, buttonElement) {
-        // Select the text field
-        textareaElement.select();
-        // Copy the text inside the text field
-        document.execCommand('copy');
-        
-        // Provide temporary feedback
-        const originalText = buttonElement.textContent;
-        buttonElement.textContent = 'Copied!';
-        setTimeout(() => {
-            buttonElement.textContent = originalText;
-        }, 1500);
-    }
+    saveButton.addEventListener('click', saveExpression);
 
     copyMathButton.addEventListener('click', () => {
         copyText(mathOutput, copyMathButton);
@@ -197,6 +250,41 @@
     copyLatexButton.addEventListener('click', () => {
         copyText(latexOutput, copyLatexButton);
     });
+
+    // --- 5. Initial Generation Functions ---
+
+    // Generate the Symbol Buttons
+    symbols.forEach(symbol => {
+        const button = document.createElement('button');
+        button.textContent = symbol;
+        button.className = 'symbol-button';
+        button.addEventListener('click', () => appendSymbol(symbol));
+        buttonsContainer.appendChild(button);
+    });
+
+    // Generate the Memory Slots
+    for (let i = 1; i <= MAX_MEMORY_SLOTS; i++) {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'memory-slot';
+        
+        const label = document.createElement('label');
+        label.textContent = `Expression ${i}:`;
+        
+        const textarea = document.createElement('textarea');
+        textarea.id = `expression-${i}`;
+        textarea.readOnly = true;
+        textarea.placeholder = 'Empty';
+        
+        // Allow clicking the memory slot to copy its content
+        textarea.addEventListener('click', () => {
+            copyText(textarea, null); // Pass null for buttonElement as we don't need button feedback
+            alert(`Expression ${i} copied to clipboard!`);
+        });
+
+        slotDiv.appendChild(label);
+        slotDiv.appendChild(textarea);
+        memorySlotsContainer.appendChild(slotDiv);
+    }
 
     // Initialize displays
     updateDisplays(); 
